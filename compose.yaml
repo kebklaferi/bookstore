@@ -1,0 +1,34 @@
+services:
+  cockroach:
+    image: cockroachdb/cockroach:v23.1.4
+    command: start-single-node --insecure
+    volumes:
+      - cockroach-data:/cockroach/cockroach-data
+    networks:
+      - bookstore_network
+
+  bookstore-server:
+    image: bookstore-backend:latest
+    environment:
+      - DB_USER=root
+      - DB_HOST=cockroach
+      - DB_NAME=bookstore
+      - DB_PORT=26257
+      - JWT_SECRET=supersecret
+      - PORT=3000
+    depends_on:
+      - cockroach
+    ports:
+      - "3000:3000"
+    networks:
+      - bookstore_network
+    
+  bookstore-client:
+    image: bookstore-frontend:latest
+
+volumes:
+  cockroach-data:
+
+networks:
+  bookstore_network:
+    driver: bridge
