@@ -6,6 +6,9 @@ services:
       - cockroach-data:/cockroach/cockroach-data
     networks:
       - bookstore_network
+    ports:
+      - "26257:26257"  # SQL
+      - "8080:8080"    # Admin UI
 
   bookstore-server:
     image: bookstore-backend:latest
@@ -22,9 +25,17 @@ services:
       - "3000:3000"
     networks:
       - bookstore_network
-    
+
   bookstore-client:
     image: bookstore-frontend:latest
+    environment:
+      - VITE_API_URL=http://bookstore-server:3000/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - bookstore-server
+    networks:
+      - bookstore_network
 
 volumes:
   cockroach-data:

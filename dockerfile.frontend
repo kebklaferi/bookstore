@@ -1,7 +1,7 @@
 # 1️⃣ Build stage
 FROM node:20-alpine AS build
 
-WORKDIR /client
+WORKDIR /app
 
 # Copy package.json and package-lock.json first (for caching)
 COPY package*.json ./
@@ -10,7 +10,7 @@ COPY package*.json ./
 RUN npm install
 
 # Copy all source code
-COPY . .
+COPY client/. .
 
 # Build the project (Vite automatically compiles TS)
 RUN npm run build
