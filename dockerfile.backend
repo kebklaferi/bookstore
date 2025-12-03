@@ -11,7 +11,7 @@ COPY package*.json ./
 RUN npm install
 
 # Copy the rest of the backend code
-COPY . .
+COPY server/. .
 
 # Start the server
 CMD ["node", "server.js"]
