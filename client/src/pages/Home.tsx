@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import BookList from "@/components/books/BookList";
 import MyListSection from "@/components/books/MyListSection";
@@ -88,13 +88,13 @@ const Home = ({ onLogout }: HomeProps) => {
           {/* Navigation Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-secondary/40">
-              <TabsTrigger value="books" className="gap-2">
+              <TabsTrigger value="books" data-testid="tab-books" className="gap-2">
                 <BookOpen className="h-4 w-4" />
-                <span className="hidden sm:inline">Library</span>
+                <span>Library</span>
               </TabsTrigger>
-              <TabsTrigger value="mylist" className="gap-2">
+              <TabsTrigger value="mylist" data-testid="tab-mylist" className="gap-2">
                 <Heart className="h-4 w-4" />
-                <span className="hidden sm:inline">My List</span>
+                <span>My List</span>
                 {myList.length > 0 && (
                   <span className="ml-1 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
                     {myList.length}
@@ -102,8 +102,40 @@ const Home = ({ onLogout }: HomeProps) => {
                 )}
               </TabsTrigger>
             </TabsList>
-          </Tabs>
 
+            {/* Tab content */}
+            <TabsContent value="books" data-testid="books-content">
+              <div className="mb-8">
+                <h2 data-testid="tab-heading" className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                  Explore Library
+                </h2>
+                <p className="mt-2 text-muted-foreground">
+                  Discover and save books to your personal collection
+                </p>
+              </div>
+              <BookList
+                books={allBooks}
+                onAddToMyList={handleAddToMyList}
+                onDeleteBook={handleDeleteBook}
+                myList={myList}
+              />
+            </TabsContent>
+
+            <TabsContent value="mylist" data-testid="mylist-content">
+              <div className="mb-8">
+                <h2 data-testid="tab-heading" className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                  My Reading List
+                </h2>
+                <p className="mt-2 text-muted-foreground">
+                  {myList.length} {myList.length === 1 ? "book" : "books"} in your list
+                </p>
+              </div>
+              <MyListSection
+                books={myList}
+                onRemoveFromMyList={handleRemoveFromMyList}
+              />
+            </TabsContent>
+          </Tabs>
           {/* Actions */}
           <div className="flex items-center gap-3">
             <CreateBookModal onBookCreated={handleRefresh} />
@@ -113,40 +145,6 @@ const Home = ({ onLogout }: HomeProps) => {
           </div>
         </div>
       </header>
-
-      {/* Main Content */}
-      <main className="container px-4 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h2 className="font-display text-3xl font-bold text-foreground sm:text-4xl">
-            {activeTab === "books" ? "Explore Library" : "My Reading List"}
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-            {activeTab === "books"
-              ? "Discover and save books to your personal collection"
-              : `${myList.length} ${myList.length === 1 ? "book" : "books"} in your list`}
-          </p>
-        </div>
-
-        {/* Content */}
-        <div>
-          {activeTab === "books" && (
-            <BookList
-              books={allBooks}
-              onAddToMyList={handleAddToMyList}
-              onDeleteBook={handleDeleteBook}
-              myList={myList}
-            />
-          )}
-
-          {activeTab === "mylist" && (
-            <MyListSection
-              books={myList}
-              onRemoveFromMyList={handleRemoveFromMyList}
-            />
-          )}
-        </div>
-      </main>
 
       {/* Footer */}
       <footer className="border-t border-border/50 bg-card/50">
