@@ -11,6 +11,16 @@
   "type": "module",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/supertest": "^6.0.3",
+    "@vitest/coverage-v8": "^4.0.15",
+    "supertest": "^7.1.4",
+    "vitest": "^4.0.15"
   }
 }
