@@ -63,10 +63,17 @@ jobs:
           name: backend-coverage
           path: ./server/coverage
   
+<<<<<<< HEAD
   build-frontend:
     name: Build frontend
     runs-on: ubuntu-latest
     needs: [frontend-tests]
+=======
+  build:
+    name: Build frontend and backend
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests]
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -76,8 +83,13 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
+<<<<<<< HEAD
           cache-dependency-path: ./client/package-lock.json
 
+=======
+
+      # ---------- FRONTEND BUILD ----------
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
       - name: Install frontend dependencies
         run: npm ci
         working-directory: ./client
@@ -93,6 +105,7 @@ jobs:
           name: frontend-dist
           path: ./client/dist
 
+<<<<<<< HEAD
   build-backend:
     name: Build backend
     runs-on: ubuntu-latest
@@ -108,6 +121,9 @@ jobs:
           cache: 'npm'
           cache-dependency-path: ./server/package-lock.json
 
+=======
+      # ---------- BACKEND BUILD ----------
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
       - name: Install backend dependencies
         run: npm ci
         working-directory: ./server
@@ -118,6 +134,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-source
+<<<<<<< HEAD
           path: |
             ./server/server.js
             ./server/package.json
@@ -127,18 +144,35 @@ jobs:
     name: Build Docker images
     runs-on: ubuntu-latest
     needs: [build-backend, build-frontend]
+=======
+          path: ./server
+  
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: build
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+<<<<<<< HEAD
       # Download build artifacts instead of rebuilding → saves time
+=======
+      # Downloads build artifacts instead of rebuilding → saves time
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
       - name: Download frontend build artifact
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
+<<<<<<< HEAD
           path: ./client
 
       # Download build artifacts instead of rebuilding → saves time
+=======
+          path: ./client/dist
+      
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
       - name: Download backend source artifact
         uses: actions/download-artifact@v4
         with:
@@ -151,6 +185,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
+<<<<<<< HEAD
       # ---------- FRONTEND DOCKER BUILD ----------
       - name: Build frontend Docker image
         run: | 
@@ -190,3 +225,14 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+=======
+      # ustvarimo dva taga: enega s SHA commit hash, drugega z "latest", oboje pushamo na Docker Hub
+      - name: Build Docker image
+        run: docker build -t klakebferi/bookstore:${{ github.sha }} -t klakebferi/bookstore:latest .
+
+      - name: Push Docker image
+        run: docker push klakebferi/bookstore:${{ github.sha }}
+
+      - name: Push latest Docker image
+        run: docker push klakebferi/bookstore:latest
+>>>>>>> 5cc9b8a (Updated CI/CD pipeline)
