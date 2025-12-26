@@ -1,0 +1,144 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./client
+
+      - name: Run client tests with coverage
+        run: npm run test:coverage
+        working-directory: ./client
+
+      - name: Upload client coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: ./client/coverage
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./server
+
+      - name: Run backend tests with coverage
+        run: npm run test:coverage
+        working-directory: ./server
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: ./server/coverage
+  
+  build:
+    name: Build frontend and backend
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # ---------- FRONTEND BUILD ----------
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./client
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./client
+        
+        # shrani zgrajeno frontend aplikacijo kot artefact
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./client/dist
+
+      # ---------- BACKEND BUILD ----------
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: ./server
+
+      # shrani backend source kot artefact
+      # Uploads frontend dist and backend source as artifacts → reusable in Docker build
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-source
+          path: ./server
+  
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Downloads build artifacts instead of rebuilding → saves time
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./client/dist
+      
+      - name: Download backend source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-source
+          path: ./server
+
+      - name: Log into docker hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # ustvarimo dva taga: enega s SHA commit hash, drugega z "latest", oboje pushamo na Docker Hub
+      - name: Build Docker image
+        run: docker build -t klakebferi/bookstore:${{ github.sha }} -t klakebferi/bookstore:latest .
+
+      - name: Push Docker image
+        run: docker push klakebferi/bookstore:${{ github.sha }}
+
+      - name: Push latest Docker image
+        run: docker push klakebferi/bookstore:latest
