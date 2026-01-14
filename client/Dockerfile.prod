@@ -1,7 +1,7 @@
 FROM nginx:alpine
 
 # Kopira ARTEFAKT (dist), ki pride iz CI
-COPY dist /usr/share/nginx/html
+COPY . /usr/share/nginx/html
 
 EXPOSE 80
 

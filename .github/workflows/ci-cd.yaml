@@ -91,7 +91,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
-          path: ./client
+          path: ./client/dist
 
   build-backend:
     name: Build backend
