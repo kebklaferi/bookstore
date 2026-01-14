@@ -112,10 +112,6 @@ jobs:
         run: npm ci
         working-directory: ./server
 
-      - name: Build backend
-        run: npm run build
-        working-directory: ./server
-
       # shrani backend source kot artefact
       # Uploads frontend dist and backend source as artifacts → reusable in Docker build
       - name: Upload backend artifact
