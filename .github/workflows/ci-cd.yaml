@@ -153,7 +153,8 @@ jobs:
 
       # ---------- FRONTEND DOCKER BUILD ----------
       - name: Build frontend Docker image
-        run: docker build -t klakebferi/bookstore-frontend:${{ github.sha }} \
+        run: | 
+          docker build -t klakebferi/bookstore-frontend:${{ github.sha }} \
           -t klakebferi/bookstore-frontend:latest \
           -f ./client/Dockerfile.prod ./client
 
@@ -165,7 +166,8 @@ jobs:
 
       # ---------- BACKEND DOCKER BUILD ----------
       - name: Build backend Docker image
-        run: docker build -t klakebferi/bookstore-backend:${{ github.sha }} \
+        run: |
+          docker build -t klakebferi/bookstore-backend:${{ github.sha }} \
           -t klakebferi/bookstore-backend:latest \
           -f ./server/Dockerfile.prod ./server
 
