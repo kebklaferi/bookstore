@@ -102,40 +102,8 @@ const Home = ({ onLogout }: HomeProps) => {
                 )}
               </TabsTrigger>
             </TabsList>
-
-            {/* Tab content */}
-            <TabsContent value="books" data-testid="books-content">
-              <div className="mb-8">
-                <h2 data-testid="tab-heading" className="font-display text-3xl font-bold text-foreground sm:text-4xl">
-                  Explore Library
-                </h2>
-                <p className="mt-2 text-muted-foreground">
-                  Discover and save books to your personal collection
-                </p>
-              </div>
-              <BookList
-                books={allBooks}
-                onAddToMyList={handleAddToMyList}
-                onDeleteBook={handleDeleteBook}
-                myList={myList}
-              />
-            </TabsContent>
-
-            <TabsContent value="mylist" data-testid="mylist-content">
-              <div className="mb-8">
-                <h2 data-testid="tab-heading" className="font-display text-3xl font-bold text-foreground sm:text-4xl">
-                  My Reading List
-                </h2>
-                <p className="mt-2 text-muted-foreground">
-                  {myList.length} {myList.length === 1 ? "book" : "books"} in your list
-                </p>
-              </div>
-              <MyListSection
-                books={myList}
-                onRemoveFromMyList={handleRemoveFromMyList}
-              />
-            </TabsContent>
           </Tabs>
+
           {/* Actions */}
           <div className="flex items-center gap-3">
             <CreateBookModal onBookCreated={handleRefresh} />
@@ -145,6 +113,44 @@ const Home = ({ onLogout }: HomeProps) => {
           </div>
         </div>
       </header>
+
+      {/* Main Content */}
+      <main className="container px-4 py-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          {/* Tab content */}
+          <TabsContent value="books" data-testid="books-content">
+            <div className="mb-8">
+              <h2 data-testid="tab-heading" className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                Explore Library
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                Discover and save books to your personal collection
+              </p>
+            </div>
+            <BookList
+              books={allBooks}
+              onAddToMyList={handleAddToMyList}
+              onDeleteBook={handleDeleteBook}
+              myList={myList}
+            />
+          </TabsContent>
+
+          <TabsContent value="mylist" data-testid="mylist-content">
+            <div className="mb-8">
+              <h2 data-testid="tab-heading" className="font-display text-3xl font-bold text-foreground sm:text-4xl">
+                My Reading List
+              </h2>
+              <p className="mt-2 text-muted-foreground">
+                {myList.length} {myList.length === 1 ? "book" : "books"} in your list
+              </p>
+            </div>
+            <MyListSection
+              books={myList}
+              onRemoveFromMyList={handleRemoveFromMyList}
+            />
+          </TabsContent>
+        </Tabs>
+      </main>
 
       {/* Footer */}
       <footer className="border-t border-border/50 bg-card/50">

@@ -1,24 +1,23 @@
 import pkg from "pg";
 const { Pool } = pkg;
 
-// This will hold the main application pool *after* initDb() runs
+// Top-level pool for app usage
 let pool;
 
-// 1. Create a maintenance pool to connect to the 'defaultdb'
-// This pool is just for checking readiness and creating our app database
+// Maintenance pool for DB creation / readiness check
 const maintenancePool = new Pool({
-  user: process.env.DB_USER || "root",
-  host: process.env.DB_HOST || "cockroach",
-  database: "defaultdb", // <-- Connect to the default database
-  password: process.env.DB_PASSWORD || "",
-  port: Number(process.env.DB_PORT) || 26257,
-  ssl: false // <-- IMPORTANT: Must be false for --insecure
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_DEFAULT,
+  password: process.env.DB_PASSWORD,
+  port: Number(process.env.DB_PORT),
+  ssl: process.env.DB_SSL === "true"
 });
 
-async function waitForCockroach(retries = 20, delay = 3000) {
+// Wait for DB to be ready
+async function waitForCockroach(retries = 30, delay = 5000) {
   for (let i = 0; i < retries; i++) {
     try {
-      // 2. Use the maintenance pool to check if the service is up
       await maintenancePool.query("SELECT 1");
       console.log("✅ CockroachDB service is ready");
       return;
@@ -32,28 +31,34 @@ async function waitForCockroach(retries = 20, delay = 3000) {
 
 export async function initDb() {
   try {
-    // 3. Wait for the service to be ready
     await waitForCockroach();
 
-    // 4. Use the maintenance pool to create the application database
-    const dbName = process.env.DB_NAME || "bookstore";
-    await maintenancePool.query(`CREATE DATABASE IF NOT EXISTS "${dbName}";`);
-    console.log(`✅ Database "${dbName}" checked/created.`);
-    
-    // We are done with the maintenance pool
+    const dbName = process.env.DB_NAME;
+    const canCreateDB = process.env.DB_CAN_CREATE_DATABASE !== "false";
+
+    // Create application database if allowed
+    if (canCreateDB) {
+      await maintenancePool.query(`CREATE DATABASE IF NOT EXISTS "${dbName}";`);
+      console.log(`✅ Database "${dbName}" checked/created.`);
+    } else {
+      console.log(`ℹ️ Skipping database creation for "${dbName}"`);
+    }
+
     await maintenancePool.end();
 
-    // 5. NOW, create the main application pool
+    // Connect main pool to application DB
     pool = new Pool({
-      user: process.env.DB_USER || "root",
-      host: process.env.DB_HOST || "cockroach",
-      database: dbName, // <-- Connect to the 'bookstore' DB
-      password: process.env.DB_PASSWORD || "",
-      port: Number(process.env.DB_PORT) || 26257,
-      ssl: false // <-- IMPORTANT: Must be false for --insecure
+      user: process.env.DB_USER,
+      host: process.env.DB_HOST,
+      database: dbName,
+      password: process.env.DB_PASSWORD,
+      port: Number(process.env.DB_PORT),
+      ssl: process.env.DB_SSL === "true"
+        ? { rejectUnauthorized: false } // allow self-signed / cloud certs
+        : false
     });
 
-    // 6. Run your table creation scripts using the main pool
+    // Initialize tables (idempotent)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id BIGSERIAL PRIMARY KEY,
@@ -90,28 +95,20 @@ export async function initDb() {
 
   } catch (err) {
     console.error("❌ Error initializing database:", err);
-    await maintenancePool.end(); // Ensure it closes on error
-    if (pool) await pool.end(); // Close app pool if it was created
+    await maintenancePool.end();
+    if (pool) await pool.end();
     throw err;
   }
 }
 
-// 7. Export an object with methods to access the pool.
-// This ensures that other files get the pool *after* it's initialized,
-// not the 'null' value from when the module was first imported.
+// Export helper methods to access pool after initialization
 const db = {
-  // Convenience method for simple queries
   query: (text, params) => {
-    if (!pool) {
-      throw new Error("Database pool is not initialized. Ensure initDb() has completed.");
-    }
+    if (!pool) throw new Error("Database pool not initialized. Call initDb() first.");
     return pool.query(text, params);
   },
-  // Method to get the whole pool (e.g., for transactions)
   getPool: () => {
-    if (!pool) {
-      throw new Error("Database pool is not initialized. Ensure initDb() has completed.");
-    }
+    if (!pool) throw new Error("Database pool not initialized. Call initDb() first.");
     return pool;
   }
 };

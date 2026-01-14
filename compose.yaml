@@ -14,14 +14,19 @@ services:
     image: bookstore-backend:latest
     build:
       context: ./server
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     environment:
       - DB_USER=root
       - DB_HOST=cockroach
       - DB_NAME=bookstore
       - DB_PORT=26257
+      - DB_DEFAULT=defaultdb
+      - DB_SSL=false
+      - DB_CAN_CREATE_DATABASE=true
       - JWT_SECRET=supersecret
       - PORT=3000
+      - CORS_ORIGIN=http://localhost:5173
+      - NODE_ENV=production
     depends_on:
       - cockroach
     ports:
@@ -33,9 +38,7 @@ services:
     image: bookstore-frontend:latest
     build:
       context: ./client
-      dockerfile: Dockerfile
-    environment:
-      - VITE_API_URL=http://bookstore-server:3000/api
+      dockerfile: Dockerfile.dev
     ports:
       - "5173:80"
     depends_on:
