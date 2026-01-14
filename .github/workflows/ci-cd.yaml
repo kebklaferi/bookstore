@@ -117,7 +117,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Downloads build artifacts instead of rebuilding → saves time
+      # Download build artifacts instead of rebuilding → saves time
       - name: Download frontend build artifact
         uses: actions/download-artifact@v4
         with:
@@ -136,12 +136,22 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
 
-      # ustvarimo dva taga: enega s SHA commit hash, drugega z "latest", oboje pushamo na Docker Hub
-      - name: Build Docker image
-        run: docker build -t klakebferi/bookstore:${{ github.sha }} -t klakebferi/bookstore:latest .
+      # ---------- FRONTEND DOCKER BUILD ----------
+      - name: Build frontend Docker image
+        run: docker build -t klakebferi/bookstore-frontend:${{ github.sha }} -t klakebferi/bookstore-frontend:latest -f ./client/Dockerfile ./client
 
-      - name: Push Docker image
-        run: docker push klakebferi/bookstore:${{ github.sha }}
+      - name: Push frontend Docker image (SHA)
+        run: docker push klakebferi/bookstore-frontend:${{ github.sha }}
 
-      - name: Push latest Docker image
-        run: docker push klakebferi/bookstore:latest
+      - name: Push frontend Docker image (latest)
+        run: docker push klakebferi/bookstore-frontend:latest
+
+      # ---------- BACKEND DOCKER BUILD ----------
+      - name: Build backend Docker image
+        run: docker build -t klakebferi/bookstore-backend:${{ github.sha }} -t klakebferi/bookstore-backend:latest -f ./server/Dockerfile ./server
+
+      - name: Push backend Docker image (SHA)
+        run: docker push klakebferi/bookstore-backend:${{ github.sha }}
+
+      - name: Push backend Docker image (latest)
+        run: docker push klakebferi/bookstore-backend:latest

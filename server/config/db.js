@@ -8,9 +8,9 @@ let pool;
 const maintenancePool = new Pool({
   user: process.env.DB_USER,
   host: process.env.DB_HOST,
-  database: process.env.DB_DEFAULT || "defaultdb", // default maintenance DB
+  database: process.env.DB_DEFAULT,
   password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT) || 26257,
+  port: Number(process.env.DB_PORT),
   ssl: process.env.DB_SSL === "true"
 });
 
@@ -33,7 +33,7 @@ export async function initDb() {
   try {
     await waitForCockroach();
 
-    const dbName = process.env.DB_NAME || "bookstore";
+    const dbName = process.env.DB_NAME;
     const canCreateDB = process.env.DB_CAN_CREATE_DATABASE !== "false";
 
     // Create application database if allowed
@@ -52,7 +52,7 @@ export async function initDb() {
       host: process.env.DB_HOST,
       database: dbName,
       password: process.env.DB_PASSWORD,
-      port: Number(process.env.DB_PORT) || 26257,
+      port: Number(process.env.DB_PORT),
       ssl: process.env.DB_SSL === "true"
         ? { rejectUnauthorized: false } // allow self-signed / cloud certs
         : false
