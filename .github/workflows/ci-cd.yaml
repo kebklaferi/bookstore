@@ -63,10 +63,10 @@ jobs:
           name: backend-coverage
           path: ./server/coverage
   
-  build:
-    name: Build frontend and backend
+  build-frontend:
+    name: Build frontend
     runs-on: ubuntu-latest
-    needs: [frontend-tests, backend-tests]
+    needs: [frontend-tests]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -76,11 +76,8 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: |
-            ./client/package-lock.json
-            ./server/package-lock.json
+          cache-dependency-path: ./client/package-lock.json
 
-      # ---------- FRONTEND BUILD ----------
       - name: Install frontend dependencies
         run: npm ci
         working-directory: ./client
@@ -96,9 +93,27 @@ jobs:
           name: frontend-dist
           path: ./client/dist
 
-      # ---------- BACKEND BUILD ----------
+  build-backend:
+    name: Build backend
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./server/package-lock.json
+
       - name: Install backend dependencies
         run: npm ci
+        working-directory: ./server
+
+      - name: Build backend
+        run: npm run build
         working-directory: ./server
 
       # shrani backend source kot artefact
@@ -107,12 +122,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: backend-source
-          path: ./server
-  
+          path: |
+            ./server/dist
+            ./server/package.json
+            ./server/package-lock.json
+
   docker-build:
     name: Build Docker images
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build-backend, build-frontend]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -123,7 +141,8 @@ jobs:
         with:
           name: frontend-dist
           path: ./client/dist
-      
+
+      # Download build artifacts instead of rebuilding → saves time
       - name: Download backend source artifact
         uses: actions/download-artifact@v4
         with:
@@ -138,7 +157,9 @@ jobs:
 
       # ---------- FRONTEND DOCKER BUILD ----------
       - name: Build frontend Docker image
-        run: docker build -t klakebferi/bookstore-frontend:${{ github.sha }} -t klakebferi/bookstore-frontend:latest -f ./client/Dockerfile ./client
+        run: docker build -t klakebferi/bookstore-frontend:${{ github.sha }} \
+          -t klakebferi/bookstore-frontend:latest \
+          -f ./client/Dockerfile.prod ./client
 
       - name: Push frontend Docker image (SHA)
         run: docker push klakebferi/bookstore-frontend:${{ github.sha }}
@@ -148,10 +169,26 @@ jobs:
 
       # ---------- BACKEND DOCKER BUILD ----------
       - name: Build backend Docker image
-        run: docker build -t klakebferi/bookstore-backend:${{ github.sha }} -t klakebferi/bookstore-backend:latest -f ./server/Dockerfile ./server
+        run: docker build -t klakebferi/bookstore-backend:${{ github.sha }} \
+          -t klakebferi/bookstore-backend:latest \
+          -f ./server/Dockerfile.prod ./server
 
       - name: Push backend Docker image (SHA)
         run: docker push klakebferi/bookstore-backend:${{ github.sha }}
 
       - name: Push backend Docker image (latest)
         run: docker push klakebferi/bookstore-backend:latest
+    
+  deploy-frontend:
+    name: Deploy frontend to Vercel
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        run: npx vercel deploy --prod --confirm \
+          --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
