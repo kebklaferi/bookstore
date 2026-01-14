@@ -136,7 +136,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: frontend-dist
-          path: ./client/dist
+          path: ./client
 
       # Download build artifacts instead of rebuilding → saves time
       - name: Download backend source artifact
