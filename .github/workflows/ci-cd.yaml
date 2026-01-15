@@ -122,11 +122,51 @@ jobs:
             ./server/server.js
             ./server/package.json
             ./server/package-lock.json
+  
+  sonarcloud:
+    name: SonarCloud Analysis
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install frontend deps
+        run: npm ci
+        working-directory: client
+
+      - name: Install backend deps
+        run: npm ci
+        working-directory: server
+      - name: Run frontend tests
+        run: npm run test:coverage
+        working-directory: client
+
+      - name: Run backend tests
+        run: npm run test:coverage
+        working-directory: server
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: SonarCloud Quality Gate check
+        uses: SonarSource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   docker-build:
     name: Build Docker images
     runs-on: ubuntu-latest
-    needs: [build-backend, build-frontend]
+    needs: [build-backend, build-frontend, sonarcloud]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -248,7 +288,7 @@ jobs:
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    needs: docker-build
+    needs: [docker-build, sonarcloud]
     if: github.ref == 'refs/heads/production'
     environment:
       name: Production
