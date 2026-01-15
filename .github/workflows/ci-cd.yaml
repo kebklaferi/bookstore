@@ -206,3 +206,20 @@ jobs:
     steps:
       - name: Trigger Render deploy
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+  
+  deploy-pages:
+    name: Deploy GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages
+      - uses: actions/deploy-pages@v4
