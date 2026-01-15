@@ -224,3 +224,43 @@ jobs:
         with:
           path: ./pages
       - uses: actions/deploy-pages@v4
+
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: Development
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Pull, tag and push DEV image
+        run: |
+          docker pull klakebferi/bookstore-backend:latest
+          docker tag klakebferi/bookstore-backend:latest klakebferi/bookstore-backend:dev
+          docker push klakebferi/bookstore-backend:dev
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/production'
+    environment:
+      name: Production
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Pull, tag and push PROD image
+        run: |
+          docker pull klakebferi/bookstore-backend:latest
+          docker tag klakebferi/bookstore-backend:latest klakebferi/bookstore-backend:prod
+          docker push klakebferi/bookstore-backend:prod
