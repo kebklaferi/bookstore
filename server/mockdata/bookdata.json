@@ -1,0 +1,26 @@
+[
+    {
+  "title": "The Name of the Wind",
+  "author": "Patrick Rothfuss",
+  "coverImageUrl": "https://covers.openlibrary.org/b/id/8231856-L.jpg",
+  "description": "The story of a legendary wizard told through his own unforgettable voice."
+},
+{
+  "title": "Clean Code",
+  "author": "Robert C. Martin",
+  "coverImageUrl": "https://covers.openlibrary.org/b/id/9641983-L.jpg",
+  "description": "A handbook of agile software craftsmanship and writing maintainable code."
+},
+{
+  "title": "Dune",
+  "author": "Frank Herbert",
+  "coverImageUrl": "https://covers.openlibrary.org/b/id/8106661-L.jpg",
+  "description": "A science fiction epic about politics, power, and survival on the desert planet Arrakis."
+},
+{
+  "title": "The Hobbit",
+  "author": "J.R.R. Tolkien",
+  "coverImageUrl": "https://covers.openlibrary.org/b/id/6979861-L.jpg",
+  "description": ""
+}
+]

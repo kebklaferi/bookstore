@@ -1,0 +1,266 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  frontend-tests:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./client
+
+      - name: Run client tests with coverage
+        run: npm run test:coverage
+        working-directory: ./client
+
+      - name: Upload client coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: ./client/coverage
+
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./server/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: ./server
+
+      - name: Run backend tests with coverage
+        run: npm run test:coverage
+        working-directory: ./server
+
+      - name: Upload backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: ./server/coverage
+  
+  build-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    needs: [frontend-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./client/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: ./client
+
+      - name: Build frontend
+        run: npm run build
+        working-directory: ./client
+        
+        # shrani zgrajeno frontend aplikacijo kot artefact
+      - name: Upload frontend build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./client/dist
+
+  build-backend:
+    name: Build backend
+    runs-on: ubuntu-latest
+    needs: [backend-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: ./server/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: ./server
+
+      # shrani backend source kot artefact
+      # Uploads frontend dist and backend source as artifacts → reusable in Docker build
+      - name: Upload backend artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-source
+          path: |
+            ./server/server.js
+            ./server/package.json
+            ./server/package-lock.json
+
+  docker-build:
+    name: Build Docker images
+    runs-on: ubuntu-latest
+    needs: [build-backend, build-frontend]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Download build artifacts instead of rebuilding → saves time
+      - name: Download frontend build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./client
+
+      # Download build artifacts instead of rebuilding → saves time
+      - name: Download backend source artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-source
+          path: ./server
+
+      - name: Log into docker hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      # ---------- FRONTEND DOCKER BUILD ----------
+      - name: Build frontend Docker image
+        run: |
+          docker build -t klakebferi/bookstore-frontend:${{ github.sha }} \
+          -t klakebferi/bookstore-frontend:latest \
+          -f ./client/Dockerfile.prod ./client
+
+      - name: Push frontend Docker image (SHA)
+        run: docker push klakebferi/bookstore-frontend:${{ github.sha }}
+
+      - name: Push frontend Docker image (latest)
+        run: docker push klakebferi/bookstore-frontend:latest
+
+      # ---------- BACKEND DOCKER BUILD ----------
+      - name: Build backend Docker image
+        run: |
+          docker build -t klakebferi/bookstore-backend:${{ github.sha }} \
+          -t klakebferi/bookstore-backend:latest \
+          -f ./server/Dockerfile.prod ./server
+
+      - name: Push backend Docker image (SHA)
+        run: docker push klakebferi/bookstore-backend:${{ github.sha }}
+
+      - name: Push backend Docker image (latest)
+        run: docker push klakebferi/bookstore-backend:latest
+    
+  deploy-frontend:
+    name: Deploy frontend to Vercel
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Debug Vercel token presence
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then echo "TOKEN MISSING"; else echo "TOKEN PRESENT"; fi
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel
+        run: |
+          npx vercel deploy --prod --confirm --token ${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          
+  deploy-backend:
+    name: Deploy backend to Render
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger Render deploy
+        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+  
+  deploy-pages:
+    name: Deploy GitHub Pages
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./pages
+      - uses: actions/deploy-pages@v4
+
+  deploy-development:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: Development
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Pull, tag and push DEV image
+        run: |
+          docker pull klakebferi/bookstore-backend:latest
+          docker tag klakebferi/bookstore-backend:latest klakebferi/bookstore-backend:dev
+          docker push klakebferi/bookstore-backend:dev
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/production'
+    environment:
+      name: Production
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Pull, tag and push PROD image
+        run: |
+          docker pull klakebferi/bookstore-backend:latest
+          docker tag klakebferi/bookstore-backend:latest klakebferi/bookstore-backend:prod
+          docker push klakebferi/bookstore-backend:prod

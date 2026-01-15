@@ -1,0 +1,8 @@
+FROM nginx:alpine
+
+# Kopira ARTEFAKT (dist), ki pride iz CI
+COPY . /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

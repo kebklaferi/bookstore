@@ -6,25 +6,47 @@ services:
       - cockroach-data:/cockroach/cockroach-data
     networks:
       - bookstore_network
+    ports:
+      - "26257:26257"  # SQL
+      - "8080:8080"    # Admin UI
 
   bookstore-server:
     image: bookstore-backend:latest
+    build:
+      context: ./server
+      dockerfile: Dockerfile.dev
     environment:
       - DB_USER=root
       - DB_HOST=cockroach
       - DB_NAME=bookstore
       - DB_PORT=26257
+      - DB_DEFAULT=defaultdb
+      - DB_SSL=false
+      - DB_CAN_CREATE_DATABASE=true
       - JWT_SECRET=supersecret
       - PORT=3000
+      - CORS_ORIGIN=http://localhost:5173
+      - NODE_ENV=production
     depends_on:
       - cockroach
     ports:
       - "3000:3000"
     networks:
       - bookstore_network
-    
+
   bookstore-client:
     image: bookstore-frontend:latest
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+      args:
+        VITE_API_URL: http://localhost:3000/api
+    ports:
+      - "5173:80"
+    depends_on:
+      - bookstore-server
+    networks:
+      - bookstore_network
 
 volumes:
   cockroach-data:
