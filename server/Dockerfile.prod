@@ -12,7 +12,7 @@ COPY package.json package-lock.json ./
 # Namesti samo production dependencies
 RUN npm ci --omit=dev
 
-COPY server.js ./
+COPY . .
 
 # Izpostavi port (prilagodi, če ni 3000)
 EXPOSE 3000
