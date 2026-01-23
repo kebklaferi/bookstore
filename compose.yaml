@@ -33,6 +33,7 @@ services:
       - "3000:3000"
     networks:
       - bookstore_network
+      - kafka-network
 
   bookstore-client:
     image: bookstore-frontend:latest
@@ -54,3 +55,5 @@ volumes:
 networks:
   bookstore_network:
     driver: bridge
+  kafka-network:
+    external: true

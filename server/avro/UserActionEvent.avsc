@@ -1,0 +1,17 @@
+{
+  "type": "record",
+  "name": "UserActionEvent",
+  "namespace": "si.bookstore.events",
+  "fields": [
+    { "name": "event_id", "type": "string" },
+    { "name": "user_id", "type": "string" },
+    { "name": "action_type", "type": "string" },
+    { "name": "book_id", "type": ["null", "string"], "default": null },
+    {
+      "name": "metadata",
+      "type": ["null", { "type": "map", "values": "string" }],
+      "default": null
+    },
+    { "name": "action_time", "type": "long" }
+  ]
+}

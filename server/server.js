@@ -4,14 +4,20 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.js";
 import bookRoutes from "./routes/books.js";
 import { initDb } from "./config/db.js";
+import { initProducer, sendUserAction } from "./kafka/producer.js";
 import path from "path";
 
 dotenv.config();
 const app = express();
 
+async function start() {
+  await initProducer();
+}
+
 (async () => {
   try {
     await initDb();
+    await start();
 
     // CORS - allow requests from frontend
     const allowedOrigin = process.env.CORS_ORIGIN;
